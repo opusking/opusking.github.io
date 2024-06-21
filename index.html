@@ -17,22 +17,27 @@
             display: flex;
             height: 100%;
         }
-        .left-view, .right-view {
+        .right-view {
             flex: 1;
             padding: 20px;
             box-sizing: border-box;
         }
         .left-view {
+            flex: 1;
+            box-sizing: border-box;
             position: relative;
             overflow: hidden;
+            border-width: 3px;
+            border-style: solid;
+            border-color: #000000;
         }
         #mountain {
-            width: 100%;
-            height: 100%;
+            width: calc(100% - 40px);
+            height: calc(100% - 40px);
             position: absolute;
-            bottom: 0;
-            left: 0;
-            stroke: black;
+            bottom: 20px;
+            left: 20px;
+            stroke: brown;
             stroke-width: 0.5;
             fill: none;
         }
@@ -44,8 +49,47 @@
         .task-marker {
             position: absolute;
             font-size: 12px;
-            transform: translate(-50%, -50%);
+            transform: translate(-50%, -100%);
             text-align: center;
+        }
+        .task-box {
+            background-color: white;
+            border: 2px solid orange;
+            border-radius: 10px;
+            padding: 5px 10px;
+            position: relative;
+            margin-bottom: 15px;
+            max-width: 150px;
+            word-wrap: break-word;
+        }
+        .task-box::before {
+            content: attr(data-number);
+            position: absolute;
+            top: -20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: orange;
+            color: white;
+            padding: 2px 6px;
+            border-radius: 50%;
+            font-size: 12px;
+        }
+        .task-box::after {
+            content: '';
+            position: absolute;
+            bottom: -10px;
+            left: 50%;
+            border-width: 10px 10px 0;
+            border-style: solid;
+            border-color: orange transparent;
+            transform: translateX(-50%);
+        }
+        .task-tick {
+            font-size: 16px;
+            position: absolute;
+            top: 5px; /* Adjusted position */
+            left: 100%; /* Adjusted position */
+            transform: translate(-50%, -50%);
         }
         #task-list {
             list-style-type: none;
@@ -94,7 +138,7 @@
         const leftView = document.querySelector('.left-view');
 
         let tasks = [];
-        let completedTasks = 0;
+        let completionOrder = [];
 
         addTaskButton.addEventListener('click', addTask);
 
@@ -120,47 +164,55 @@
                 taskList.appendChild(li);
             });
             updateClimberPosition();
+            updateAllTaskMarkers();
         }
 
         function toggleTask(index) {
             tasks[index].completed = !tasks[index].completed;
-            completedTasks = tasks.filter(task => task.completed).length;
-            updateClimberPosition();
             if (tasks[index].completed) {
-                addTaskMarker(index);
+                if (!completionOrder.includes(index)) {
+                    completionOrder.push(index);
+                }
             } else {
-                removeTaskMarker(index);
+                completionOrder = completionOrder.filter(i => i !== index);
             }
+            updateClimberPosition();
+            updateAllTaskMarkers();
         }
 
         function updateClimberPosition() {
+            const completedTasks = tasks.filter(task => task.completed).length;
             const progress = tasks.length > 0 ? completedTasks / tasks.length : 0;
             const pathLength = mountainPath.getTotalLength();
             const point = mountainPath.getPointAtLength(pathLength * progress);
             
-            climber.style.left = `${point.x}%`;
+            climber.style.left = `${point.x-2}%`;
             climber.style.top = `${point.y}%`;
         }
 
-        function addTaskMarker(index) {
-            const progress = (index + 1) / tasks.length;
+        function updateAllTaskMarkers() {
+            document.querySelectorAll('.task-marker').forEach(marker => marker.remove());
+
+            completionOrder.forEach((taskIndex, completedIndex) => {
+                addTaskMarker(taskIndex, completedIndex + 1);
+            });
+        }
+
+        function addTaskMarker(taskIndex, completionNumber) {
+            const progress = completionNumber / tasks.length;
             const pathLength = mountainPath.getTotalLength();
             const point = mountainPath.getPointAtLength(pathLength * progress);
             
             const marker = document.createElement('div');
             marker.className = 'task-marker';
-            marker.innerHTML = `✅<br>${tasks[index].text}`;
-            marker.style.left = `${point.x}%`;
+            marker.innerHTML = `
+                <div class="task-box" data-number="${completionNumber}">${tasks[taskIndex].text}</div>
+                <div class="task-tick">✅</div>
+            `;
+            marker.style.left = `${point.x-2}%`;
             marker.style.top = `${point.y}%`;
-            marker.id = `task-marker-${index}`;
+            marker.id = `task-marker-${taskIndex}`;
             leftView.appendChild(marker);
-        }
-
-        function removeTaskMarker(index) {
-            const marker = document.getElementById(`task-marker-${index}`);
-            if (marker) {
-                marker.remove();
-            }
         }
     </script>
 </body>
